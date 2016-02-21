@@ -1,6 +1,0 @@
-{
-    "collaborators": ["user1", "user2"],
-    "repoName": "hw-name",
-    "commitMsg": "commit message yay",
-    "appendUsername": true
-}

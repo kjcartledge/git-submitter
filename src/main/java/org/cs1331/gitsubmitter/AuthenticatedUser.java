@@ -2,6 +2,7 @@ package org.cs1331.gitsubmitter;
 
 import java.util.Base64;
 import java.util.Scanner;
+import javax.security.auth.login.FailedLoginException;
 
 public class AuthenticatedUser {
 
@@ -22,6 +23,7 @@ public class AuthenticatedUser {
      */
     public static AuthenticatedUser create()
             throws Exception {
+        AuthenticatedUser authUser = null;
         String user = "", password = "", base64Auth = "";
         String lines = "------------------------------------------";
         System.out.println();
@@ -29,13 +31,10 @@ public class AuthenticatedUser {
         System.out.println("    Logging in to Georgia Tech servers    ");
         System.out.println(lines);
 
-        boolean success = false;
-        boolean twoFactor = false;
-        String twoFactorCode = null;
-        Scanner keyboard = new Scanner(System.in);
+        boolean success = true;
 
         do {
-            if (base64Auth.length() > 0) {
+            if (!success) {
                 System.out.println(lines);
                 System.out.println("      Login failed, please try again");
                 System.out.println(lines);
@@ -47,30 +46,41 @@ public class AuthenticatedUser {
             System.out.print("\tPassword: ");
             System.out.flush();
             password = new String(System.console().readPassword());
-
-            base64Auth = Base64.getEncoder().encodeToString((user + ":" + password)
-                .getBytes());
-
             try {
-                if (!twoFactor) {
-                    success = Utils.testAuth(base64Auth);
-                }
-            } catch (TwoFactorAuthException ex) {
-                twoFactor = true;
-                System.out.println("two factor exception");
-            }
-
-            if (twoFactor) {
-                System.out.println("\tTwo-Factor Code:");
-                twoFactorCode = System.console().readLine();
-                success = Utils.testTwoFactorAuth(base64Auth, twoFactorCode);
+                authUser = create(user, password);
+                success = true;
+            } catch (FailedLoginException e) {
+                success = false;
             }
         } while (!success);
+        return authUser;
+    }
+
+    public static AuthenticatedUser create(String user, String password) throws Exception {
+        boolean success = false;
+        String twoFactorCode = null;
+        String base64Auth = Base64.getEncoder().encodeToString((user + ":" + password)
+            .getBytes());
+
+        try {
+            success = Utils.testAuth(base64Auth);
+        } catch (TwoFactorAuthException ex) {
+            System.out.println("\tTwo-Factor Code:");
+            twoFactorCode = new Scanner(System.in).nextLine();
+            success = Utils.testTwoFactorAuth(base64Auth, twoFactorCode);
+        }
+
+        if (!success) {
+            throw new FailedLoginException();
+        }
+
         System.out.println("------------------------------------------");
         System.out.println("            Authenticated!");
         System.out.println("------------------------------------------");
 
         return new AuthenticatedUser(user, base64Auth, twoFactorCode);
     }
+
+
 
 }

@@ -6,6 +6,9 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.cli.CommandLine;
@@ -33,6 +36,8 @@ public class Application {
 
 
     public static void main(String... args) throws Exception {
+        LogManager.getLogManager().reset();
+        Logger.getLogger("").addHandler(new FileHandler("%t/git-submitter%g.log"));
 
         CommandLine line = parseArgs(args);
 
@@ -56,19 +61,20 @@ public class Application {
 
             String repoName = line.getOptionValue(REPO_NAME_OPT);
 
-            // Currently Not Used
             String username = null;
             if (line.hasOption(USERNAME_OPT)) {
                 username = line.getOptionValue(USERNAME_OPT);
             }
 
-            // Currently Not Used
-            char[] password = null;
+            String password = null;
             if (line.hasOption(PASSWORD_OPT)) {
-                password = line.getOptionValue(PASSWORD_OPT).toCharArray();
+                password = line.getOptionValue(PASSWORD_OPT);
             }
 
-            AuthenticatedUser user = AuthenticatedUser.create();
+            AuthenticatedUser user = username != null
+                ? AuthenticatedUser.create(username, password)
+                : AuthenticatedUser.create();
+
             StudentSubmission sub = new StudentSubmission(user, repoName);
             sub.createRepo();
 
@@ -88,7 +94,8 @@ public class Application {
             try {
                 success = sub.pushFiles(commitMsg, files);
             } catch (Exception e) {
-                throw new RuntimeException(e.getMessage(), e);
+                System.err.println("ERROR: " + e.getMessage());
+                System.exit(1);
             }
             if (success) {
                 System.out.println("Code submitted successfully!");
@@ -103,14 +110,14 @@ public class Application {
                 System.out.println("Submission unsuccessful. :(");
             }
         } catch (UnknownHostException ex) {
-            System.out.println("Internet connection failed. Please repair your"
+            System.err.println("Internet connection failed. Please repair your"
                 + " connection and try again.");
         } catch (Exception e) {
-            System.out.println("Something went wrong. Please check your"
+            System.err.println("Something went wrong. Please check your"
                 + " internet connection and that the source files are present."
                 + " Call a TA for help if you need further assistance.");
 
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -152,8 +159,8 @@ public class Application {
                 .optionalArg(false)
                 .argName("user1 user2 user3...")
                 .required(false)
-                .desc("add other users a collaborators to the repo with fork "
-                    + "privedges")
+                .desc("add other users as collaborators to the repo with fork "
+                    + "privileges")
                 .build());
         options.addOption(Option.builder(OVERRIDE_FILES_OPT)
                 .longOpt("files")
@@ -175,9 +182,8 @@ public class Application {
                 .hasArg(true)
                 .optionalArg(false)
                 .argName("repository")
-                .required(false)
-                .desc("the name of the repository to submit files to, if not "
-                    + "provided, this value will be prompted for")
+                .required()
+                .desc("the name of the repository to submit files to")
                 .build());
         options.addOption(Option.builder(USERNAME_OPT)
                 .longOpt("username")

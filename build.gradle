@@ -1,16 +1,20 @@
 apply plugin: 'java'
 apply plugin: 'application'
+apply plugin: 'groovy'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    compile files(dependencies.gradleApi().resolve().findAll { !it.name.contains("commons-cli") })
+    compile localGroovy()
     compile 'commons-cli:commons-cli:1.3.1'
     compile 'com.google.code.gson:gson:2.5'
-
 }
 
+group = 'org.cs1331'
+version = '0.3-SNAPSHOT'
 mainClassName = 'org.cs1331.gitsubmitter.Application'
 
 run {
